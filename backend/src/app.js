@@ -1,7 +1,9 @@
-const express = require('express');
-const cors = require('cors');
-const testRoute = require('./routes/test.js');
-require('dotenv').config();
+const express = require("express");
+const cors = require("cors");
+const testRoute = require("./routes/test.js");
+const { logger } = require("./config/logger")
+require("dotenv").config();
+require("./config/db");
 
 const app = express();
 const PORT = process.env.PORT || 4500;
@@ -12,12 +14,13 @@ app.use(express.json());
 
 // logger
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
+  logger.info(`${req.method} ${req.url}`);
   next();
 });
 
 // test route
 app.use("/", testRoute);
+app.use("/db-test", testRoute);
 
 // start server
 app.listen(PORT, () => {
