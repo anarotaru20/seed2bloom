@@ -1,18 +1,19 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-const router = useRouter()
+const route = useRoute()
 
-const goAddPlant = () => router.push('/plants/new')
+const title = computed(() => route.meta.title || '')
 </script>
 
 <template>
   <v-toolbar flat class="topbar">
-    <v-toolbar-title class="title">test</v-toolbar-title>
+    <v-toolbar-title class="title">
+      {{ title }}
+    </v-toolbar-title>
+
     <v-spacer />
-    <!-- <v-btn variant="flat" color="green" prepend-icon="mdi-plus" @click="goAddPlant">
-      add plant
-    </v-btn> -->
   </v-toolbar>
 </template>
 
@@ -20,9 +21,11 @@ const goAddPlant = () => router.push('/plants/new')
 .topbar {
   background: transparent;
   padding: 10px 8px;
+  border-bottom: 5px solid rgba(20, 31, 24, 0.08);
 }
 
 .title {
   font-weight: 900;
+  font-size: 1.2rem;
 }
 </style>

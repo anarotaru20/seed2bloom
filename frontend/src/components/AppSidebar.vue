@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { logout } from '@/services/auth'
 import Navbar from '@/components/Navbar.vue'
 import Footer from '@/components/Footer.vue'
+import { auth } from '@/services/firebase'
 
 const router = useRouter()
 const route = useRoute()
@@ -14,7 +15,9 @@ const handleLogout = () => {
 }
 
 const items = [
+  { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', to: '/dashboard' },
   { title: 'My plants', icon: 'mdi-sprout', to: '/plants' },
+  { title: 'Care logs', icon: 'mdi-history', to: '/care-logs' },
   { title: 'Water needs', icon: 'mdi-water', to: '/needs-water' },
   { title: 'Locations', icon: 'mdi-map-marker', to: '/locations' },
 ]
@@ -37,6 +40,10 @@ onBeforeUnmount(() => {
 // Icon switches from sun to moon after 18:00
 const isNight = computed(() => now.value.getHours() >= 18)
 const dayIcon = computed(() => (isNight.value ? 'mdi-weather-night' : 'mdi-weather-sunny'))
+// display user's first name
+const firstName = computed(
+  () => auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'there',
+)
 
 const dateLabel = computed(() =>
   now.value.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -51,13 +58,35 @@ const timeLabel = computed(() =>
   <Navbar>
     <template #actions>
       <div class="actions">
-        <v-btn icon variant="text" class="top-icon">
-          <v-icon>mdi-account-circle</v-icon>
-        </v-btn>
+        <span class="hello">
+          Hello, <strong>{{ firstName }}</strong>
+        </span>
 
-        <v-btn variant="outlined" class="btn-pill btn-orange-outline" @click="handleLogout">
-          Logout
-        </v-btn>
+        <v-menu location="bottom end" offset="10">
+          <template #activator="{ props }">
+            <v-btn v-bind="props" icon variant="text" class="top-icon">
+              <v-icon>mdi-account-circle</v-icon>
+            </v-btn>
+          </template>
+
+          <v-list class="profile-menu" density="comfortable">
+            <v-list-item to="/profile" rounded="xl">
+              <template #prepend>
+                <v-icon size="18">mdi-account</v-icon>
+              </template>
+              <v-list-item-title>Profile</v-list-item-title>
+            </v-list-item>
+
+            <v-divider class="my-2" />
+
+            <v-list-item @click="handleLogout" rounded="xl">
+              <template #prepend>
+                <v-icon size="18">mdi-logout</v-icon>
+              </template>
+              <v-list-item-title>Logout</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </div>
     </template>
   </Navbar>
@@ -286,7 +315,7 @@ const timeLabel = computed(() =>
 
 .menu-item.active {
   border-color: rgba(131, 230, 74, 0.22);
-  background:  rgba(131, 230, 74, 0.22);
+  background: rgba(131, 230, 74, 0.22);
 }
 
 .icon-wrap {
@@ -301,7 +330,7 @@ const timeLabel = computed(() =>
 
 .menu-item.active .icon-wrap {
   border-color: rgba(131, 230, 74, 0.22);
-  background:  rgba(44, 102, 11, 0.22);
+  background: rgba(44, 102, 11, 0.22);
 }
 
 .menu-title {
@@ -327,5 +356,23 @@ const timeLabel = computed(() =>
   .menu-item {
     margin: 8px 2px;
   }
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hello {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.profile-menu {
+  border-radius: 16px;
+  padding: 6px;
+  min-width: 180px;
 }
 </style>
