@@ -1,88 +1,101 @@
-const { admin, db } = require("../config/db")
-const { signJwt } = require("../config/jwt")
+const { admin, db } = require("../config/db");
+const { signJwt } = require("../config/jwt");
 
 async function register(req, res) {
   try {
-    const { idToken, profile } = req.body
+    const { idToken, profile } = req.body;
+    if (!idToken)
+      return res.status(400).json({ message: "idToken is required" });
 
-    if (!idToken) return res.status(400).json({ message: "idToken is required" })
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const uid = decoded.uid;
 
-    const decoded = await admin.auth().verifyIdToken(idToken)
-    const uid = decoded.uid
+    const safeProfile = profile && typeof profile === "object" ? profile : {};
 
-    const safeProfile = profile && typeof profile === "object" ? profile : {}
+    const firstName = safeProfile.firstName ?? null;
+    const lastName = safeProfile.lastName ?? null;
+    const birthDate = safeProfile.birthDate ?? null;
+    const email = decoded.email || safeProfile.email || null;
 
-    const firstName = safeProfile.firstName ?? null
-    const lastName = safeProfile.lastName ?? null
-    const email = safeProfile.email ?? decoded.email ?? null
-    const passwordHash = safeProfile.passwordHash ?? null
-    const birthDate = safeProfile.birthDate ?? null
+    if (!email) return res.status(400).json({ message: "email is required" });
 
-    if (!email) return res.status(400).json({ message: "email is required" })
-    if (!passwordHash) return res.status(400).json({ message: "passwordHash is required" })
+    const userRef = db.collection("users").doc(uid);
+    const snap = await userRef.get();
+    const existing = snap.exists ? snap.data() : null;
 
-    const userRef = db.collection("users").doc(uid)
-    const snap = await userRef.get()
-    const existing = snap.exists ? snap.data() : null
+    const userData = {
+      uid,
+      email,
+      firstName,
+      lastName,
+      birthDate,
+      provider: decoded.firebase?.sign_in_provider || "password",
+      createdAt: existing?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-    await userRef.set(
-      {
-        uid,
-        firstName,
-        lastName,
-        email,
-        passwordHash,
-        birthDate,
-        createdAt: existing?.createdAt || new Date().toISOString(),
-      },
-      { merge: true }
-    )
+    await userRef.set(userData, { merge: true });
 
-    const token = signJwt({ uid, email })
-    return res.status(201).json({ token })
+    const token = signJwt({ uid, email });
+
+    return res.status(201).json({
+      token,
+      user: userData,
+    });
   } catch (e) {
-    return res.status(401).json({ message: "Invalid Firebase token" })
+    return res.status(401).json({ message: "Invalid Firebase token" });
   }
 }
 
 async function login(req, res) {
   try {
-    const { idToken } = req.body
+    const { idToken } = req.body;
+    if (!idToken)
+      return res.status(400).json({ message: "idToken is required" });
 
-    if (!idToken) return res.status(400).json({ message: "idToken is required" })
+    const decoded = await admin.auth().verifyIdToken(idToken);
+    const uid = decoded.uid;
+    const email = decoded.email || null;
 
-    const decoded = await admin.auth().verifyIdToken(idToken)
-    const uid = decoded.uid
+    const userRef = db.collection("users").doc(uid);
+    const snap = await userRef.get();
+    const existing = snap.exists ? snap.data() : {};
 
-    await db.collection("users").doc(uid).set(
-      {
-        uid,
-        email: decoded.email || null,
-        provider: decoded.firebase?.sign_in_provider || "password",
-        lastLoginAt: new Date().toISOString(),
-      },
-      { merge: true }
-    )
+    const userData = {
+      ...existing,
+      uid,
+      email,
+      provider:
+        decoded.firebase?.sign_in_provider || existing?.provider || "password",
+      lastLoginAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-    const token = signJwt({ uid, email: decoded.email || null })
-    return res.json({ token })
+    await userRef.set(userData, { merge: true });
+
+    const token = signJwt({ uid, email });
+
+    return res.json({
+      token,
+      user: userData,
+    });
   } catch (e) {
-    return res.status(401).json({ message: "Invalid Firebase token" })
+    return res.status(401).json({ message: "Invalid Firebase token" });
   }
 }
 
 async function profile(req, res) {
   try {
-    const uid = req.user?.uid
-    if (!uid) return res.status(401).json({ message: "Unauthorized" })
+    const uid = req.user?.uid;
+    if (!uid) return res.status(401).json({ message: "Unauthorized" });
 
-    const snap = await db.collection("users").doc(uid).get()
-    const data = snap.exists ? snap.data() : null
+    const snap = await db.collection("users").doc(uid).get();
+    const data = snap.exists ? snap.data() : null;
 
-    return res.json({ user: data })
+    return res.json({ user: data });
   } catch (e) {
-    return res.status(500).json({ message: "Failed to load profile" })
+    return res.status(500).json({ message: "Failed to load profile" });
   }
 }
 
-module.exports = { register, login, profile }
+module.exports = { register, login, profile };

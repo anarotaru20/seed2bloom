@@ -14,7 +14,7 @@ export async function login(email, password) {
   })
 
   const data = await response.json()
-  localStorage.setItem('jwt', data.token)
+  if (!response.ok) throw new Error(data.message || 'Login failed')
 
   return data
 }
@@ -32,7 +32,6 @@ export async function register(email, password, profile) {
   const data = await response.json()
   if (!response.ok) throw new Error(data.message || 'Register failed')
 
-  localStorage.setItem('jwt', data.token)
   return data
 }
 
@@ -45,9 +44,13 @@ export async function getProfile() {
     },
   })
 
-  return response.json()
+  const data = await response.json()
+  if (!response.ok) throw new Error(data.message || 'Failed to load profile')
+
+  return data
 }
 
 export function logout() {
+  localStorage.removeItem('auth_user')
   localStorage.removeItem('jwt')
 }

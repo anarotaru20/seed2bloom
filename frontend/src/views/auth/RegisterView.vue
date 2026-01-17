@@ -1,10 +1,11 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { register as registerApi } from '../../services/auth'
+import { useAuthStore } from '@/stores/auth'
 import Navbar from '@/components/Navbar.vue'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const firstName = ref('')
 const lastName = ref('')
@@ -21,18 +22,8 @@ const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
 const months = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'January','February','March','April','May','June',
+  'July','August','September','October','November','December',
 ]
 
 const monthIndex = computed(() => months.indexOf(month.value))
@@ -55,14 +46,6 @@ const canSubmit = computed(() => {
   )
 })
 
-const hashPassword = async (plain) => {
-  const enc = new TextEncoder().encode(plain)
-  const buf = await crypto.subtle.digest('SHA-256', enc)
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
-}
-
 const handleRegister = async () => {
   message.value = ''
   loading.value = true
@@ -73,22 +56,16 @@ const handleRegister = async () => {
       return
     }
 
-    const passwordHash = await hashPassword(password.value)
-
     const profile = {
-      uid: null,
       firstName: firstName.value.trim(),
       lastName: lastName.value.trim(),
-      email: email.value.trim(),
-      passwordHash,
       birthDate: birthDateIso.value,
-      createdAt: new Date().toISOString(),
     }
 
-    await registerApi(email.value.trim(), password.value, profile)
-    router.push('/login')
+    await auth.register(email.value.trim(), password.value, profile)
+    router.push('/plants')
   } catch (e) {
-    message.value = e?.message || 'Error connecting to server'
+    message.value = e?.message || 'Register failed'
   } finally {
     loading.value = false
   }
@@ -117,119 +94,118 @@ const handleRegister = async () => {
             <div class="card-subtitle">Start your plant care space in seconds.</div>
           </div>
 
-          <v-row dense>
-            <v-col cols="6">
-              <v-text-field
-                v-model="firstName"
-                label="First name"
-                prepend-inner-icon="mdi-account-outline"
-                variant="outlined"
-                rounded="lg"
-              />
-            </v-col>
+          <v-form @submit.prevent="handleRegister">
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="firstName"
+                  label="First name"
+                  prepend-inner-icon="mdi-account-outline"
+                  variant="outlined"
+                  rounded="lg"
+                />
+              </v-col>
 
-            <v-col cols="6">
-              <v-text-field
-                v-model="lastName"
-                label="Last name"
-                prepend-inner-icon="mdi-account-outline"
-                variant="outlined"
-                rounded="lg"
-              />
-            </v-col>
-          </v-row>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="lastName"
+                  label="Last name"
+                  prepend-inner-icon="mdi-account-outline"
+                  variant="outlined"
+                  rounded="lg"
+                />
+              </v-col>
+            </v-row>
 
-          <v-row dense class="mb-2">
-            <v-col cols="4">
-              <v-select
-                v-model="day"
-                label="Day"
-                :items="Array.from({ length: 31 }, (_, i) => i + 1)"
-                prepend-inner-icon="mdi-calendar-blank"
-                variant="outlined"
-                rounded="lg"
-              />
-            </v-col>
+            <v-row dense class="mb-2">
+              <v-col cols="4">
+                <v-select
+                  v-model="day"
+                  label="Day"
+                  :items="Array.from({ length: 31 }, (_, i) => i + 1)"
+                  prepend-inner-icon="mdi-calendar-blank"
+                  variant="outlined"
+                  rounded="lg"
+                />
+              </v-col>
 
-            <v-col cols="4">
-              <v-select
-                v-model="month"
-                label="Month"
-                :items="months"
-                variant="outlined"
-                rounded="lg"
-              />
-            </v-col>
+              <v-col cols="4">
+                <v-select
+                  v-model="month"
+                  label="Month"
+                  :items="months"
+                  variant="outlined"
+                  rounded="lg"
+                />
+              </v-col>
 
-            <v-col cols="4">
-              <v-select
-                v-model="year"
-                label="Year"
-                :items="Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i)"
-                variant="outlined"
-                rounded="lg"
-              />
-            </v-col>
-          </v-row>
+              <v-col cols="4">
+                <v-select
+                  v-model="year"
+                  label="Year"
+                  :items="Array.from({ length: 80 }, (_, i) => new Date().getFullYear() - i)"
+                  variant="outlined"
+                  rounded="lg"
+                />
+              </v-col>
+            </v-row>
 
-          <v-text-field
-            v-model="email"
-            label="Email"
-            prepend-inner-icon="mdi-email-outline"
-            variant="outlined"
-            rounded="lg"
-            class="mb-3"
-          />
+            <v-text-field
+              v-model="email"
+              label="Email"
+              prepend-inner-icon="mdi-email-outline"
+              variant="outlined"
+              rounded="lg"
+              class="mb-3"
+              autocomplete="email"
+            />
 
-          <v-row dense>
-            <v-col cols="6">
-              <v-text-field
-                v-model="password"
-                label="Password"
-                :type="showPassword ? 'text' : 'password'"
-                prepend-inner-icon="mdi-lock-outline"
-                :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                @click:append-inner="showPassword = !showPassword"
-                variant="outlined"
-                rounded="lg"
-              />
-            </v-col>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="password"
+                  label="Password"
+                  :type="showPassword ? 'text' : 'password'"
+                  prepend-inner-icon="mdi-lock-outline"
+                  :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showPassword = !showPassword"
+                  variant="outlined"
+                  rounded="lg"
+                  autocomplete="new-password"
+                />
+              </v-col>
 
-            <v-col cols="6">
-              <v-text-field
-                v-model="confirmPassword"
-                label="Confirm password"
-                :type="showConfirmPassword ? 'text' : 'password'"
-                prepend-inner-icon="mdi-lock-check-outline"
-                :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                @click:append-inner="showConfirmPassword = !showConfirmPassword"
-                variant="outlined"
-                rounded="lg"
-              />
-            </v-col>
-          </v-row>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="confirmPassword"
+                  label="Confirm password"
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  prepend-inner-icon="mdi-lock-check-outline"
+                  :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showConfirmPassword = !showConfirmPassword"
+                  variant="outlined"
+                  rounded="lg"
+                  autocomplete="new-password"
+                />
+              </v-col>
+            </v-row>
 
-          <v-btn
-            size="large"
-            block
-            rounded="lg"
-            class="btn-pill btn-green cta mt-4"
-            :loading="loading"
-            :disabled="!canSubmit"
-            @click="handleRegister"
-          >
-            Start growing
-          </v-btn>
+            <v-btn
+              type="submit"
+              size="large"
+              block
+              rounded="lg"
+              class="btn-pill btn-green cta mt-4"
+              :loading="loading"
+              :disabled="!canSubmit"
+            >
+              Start growing
+            </v-btn>
 
-          <v-alert
-            v-if="message"
-            class="mt-4"
-            variant="tonal"
-            :type="message === 'Passwords do not match' ? 'warning' : 'success'"
-            rounded="lg"
-          >
-            {{ message }}
-          </v-alert>
+            <v-alert v-if="message" class="mt-4" variant="tonal" type="error" rounded="lg">
+              {{ message }}
+            </v-alert>
+          </v-form>
 
           <div class="bottom text-center mt-5">
             <span>Already part of the greenhouse?</span>
@@ -292,19 +268,6 @@ const handleRegister = async () => {
 .card {
   border-radius: 22px;
   padding: 34px 36px;
-  animation: cardIn 520ms ease both;
-}
-@keyframes cardIn {
-  from {
-    opacity: 0;
-    transform: translateY(18px) scale(0.985);
-    filter: blur(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
-  }
 }
 
 .top {
@@ -325,7 +288,6 @@ const handleRegister = async () => {
 .right {
   max-width: 560px;
   text-align: right;
-  animation: fadeUp 650ms ease both;
 }
 
 .right .logo {
@@ -373,22 +335,6 @@ const handleRegister = async () => {
   padding: 10px 12px;
   border-radius: 16px;
   font-weight: 700;
-  opacity: 0;
-  animation:
-    fadeUp 650ms ease both,
-    floatSoft 3.6s ease-in-out infinite;
-}
-
-.badge:nth-child(1) {
-  animation-delay: 240ms, 0ms;
-}
-
-.badge:nth-child(2) {
-  animation-delay: 360ms, 180ms;
-}
-
-.badge:nth-child(3) {
-  animation-delay: 480ms, 360ms;
 }
 
 .bottom {
@@ -405,6 +351,10 @@ const handleRegister = async () => {
 
 .link-yellow {
   color: #fb8c00;
+}
+
+.link-yellow:hover {
+  text-decoration: underline;
 }
 
 .chip-green {
@@ -453,27 +403,6 @@ const handleRegister = async () => {
 
 .cta {
   animation: pulse 2.8s ease-in-out infinite;
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes floatSoft {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
-  }
 }
 
 @keyframes pulse {

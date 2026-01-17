@@ -1,10 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { login } from '../../services/auth'
+import { useAuthStore } from '@/stores/auth'
 import Navbar from '@/components/Navbar.vue'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const email = ref('')
 const password = ref('')
@@ -13,12 +14,16 @@ const showPassword = ref(false)
 const message = ref('')
 const loading = ref(false)
 
+const canSubmit = computed(() => {
+  return email.value.trim().length > 0 && password.value.length > 0 && !loading.value
+})
+
 const handleLogin = async () => {
   message.value = ''
   loading.value = true
 
   try {
-    await login(email.value.trim(), password.value)
+    await auth.login(email.value.trim(), password.value)
     router.push('/plants')
   } catch (e) {
     message.value = e?.message || 'Login failed'
@@ -81,49 +86,52 @@ const handleLogin = async () => {
             <div class="card-subtitle">Continue your plant care journey.</div>
           </div>
 
-          <v-text-field
-            v-model="email"
-            label="Email"
-            prepend-inner-icon="mdi-email-outline"
-            variant="outlined"
-            rounded="lg"
-            class="mb-3"
-            autocomplete="email"
-          />
+          <v-form @submit.prevent="handleLogin">
+            <v-text-field
+              v-model="email"
+              label="Email"
+              prepend-inner-icon="mdi-email-outline"
+              variant="outlined"
+              rounded="lg"
+              class="mb-3"
+              autocomplete="email"
+            />
 
-          <v-text-field
-            v-model="password"
-            label="Password"
-            prepend-inner-icon="mdi-lock-outline"
-            :type="showPassword ? 'text' : 'password'"
-            variant="outlined"
-            rounded="lg"
-            class="mb-4"
-            autocomplete="current-password"
-            :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
-            @click:append-inner="showPassword = !showPassword"
-          />
+            <v-text-field
+              v-model="password"
+              label="Password"
+              prepend-inner-icon="mdi-lock-outline"
+              :type="showPassword ? 'text' : 'password'"
+              variant="outlined"
+              rounded="lg"
+              class="mb-4"
+              autocomplete="current-password"
+              :append-inner-icon="showPassword ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
+              @click:append-inner="showPassword = !showPassword"
+            />
 
-          <v-btn
-            size="large"
-            block
-            rounded="lg"
-            class="btn-pill btn-green cta"
-            :loading="loading"
-            @click="handleLogin"
-          >
-            Login
-          </v-btn>
+            <v-btn
+              type="submit"
+              size="large"
+              block
+              rounded="lg"
+              class="btn-pill btn-green cta"
+              :loading="loading"
+              :disabled="!canSubmit"
+            >
+              Login
+            </v-btn>
 
-          <v-alert v-if="message" class="mt-4" variant="tonal" type="error" rounded="lg">
-            {{ message }}
-          </v-alert>
+            <v-alert v-if="message" class="mt-4" variant="tonal" type="error" rounded="lg">
+              {{ message }}
+            </v-alert>
+          </v-form>
 
           <div class="bottom text-center mt-6">
             <span class="text-medium-emphasis">New to the jungle?</span>
-            <RouterLink to="/register" class="link-strong link-yellow"
-              >Create your account</RouterLink
-            >
+            <RouterLink to="/register" class="link-strong link-yellow">
+              Create your account
+            </RouterLink>
           </div>
         </v-card>
       </v-col>
@@ -232,25 +240,25 @@ const handleLogin = async () => {
     fadeUp 650ms ease both,
     floatSoft 3.6s ease-in-out infinite;
 }
-.badge:nth-child(1) {
-  animation-delay: 240ms, 0ms;
-}
-.badge:nth-child(2) {
-  animation-delay: 360ms, 180ms;
-}
-.badge:nth-child(3) {
-  animation-delay: 480ms, 360ms;
-}
-@keyframes cardIn {
+
+@keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.985);
-    filter: blur(2px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
   }
 }
 
@@ -258,7 +266,6 @@ const handleLogin = async () => {
   border-radius: 24px;
   padding: 34px 36px;
   min-height: 430px;
-  animation: cardIn 520ms ease both;
   margin-top: 18px;
 }
 
@@ -279,6 +286,16 @@ const handleLogin = async () => {
 
 .cta {
   animation: pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 
 .bottom {
@@ -317,36 +334,5 @@ const handleLogin = async () => {
   background: rgba(229, 57, 53, 0.14);
   color: #e53935;
   border: 1px solid rgba(229, 57, 53, 0.18);
-}
-
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes floatSoft {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-7px);
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
-  }
 }
 </style>
