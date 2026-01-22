@@ -239,14 +239,13 @@ const saveEdit = () => {
   const idx = plants.value.findIndex((x) => x.id === selectedPlant.value.id)
   if (idx === -1) return
 
-plants.value[idx] = {
-  ...plants.value[idx],
-  location: editForm.value.location,
-  waterEveryDays: Number(editForm.value.waterEveryDays) || plants.value[idx].waterEveryDays,
-  note: editForm.value.notes,
-  photoUrl: editForm.value.photoUrl,
-}
-
+  plants.value[idx] = {
+    ...plants.value[idx],
+    location: editForm.value.location,
+    waterEveryDays: Number(editForm.value.waterEveryDays) || plants.value[idx].waterEveryDays,
+    note: editForm.value.notes,
+    photoUrl: editForm.value.photoUrl,
+  }
 
   editDialog.value = false
   selectedPlant.value = null
@@ -312,8 +311,6 @@ plants.value[idx] = {
     <!-- DIALOG FOR CATALOG - ADD PLANTS -->
     <PlantCatalogDialog
       v-model="addDialog"
-      :templates="plantTemplates"
-      :tags="tags"
       v-model:search="search"
       v-model:activeTag="activeTag"
       @select="openDetails"

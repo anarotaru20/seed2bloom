@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import BaseDialog from './BaseDialog.vue'
 import PlantCard from '../PlantTemplateCard.vue'
+import { fetchPlantCatalog } from '@/services/plantCatalog'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -13,18 +14,68 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'update:search', 'update:activeTag', 'select'])
 
+const loading = ref(false)
+const localTemplates = ref([])
+const loadError = ref('')
+
+watch(
+  () => props.modelValue,
+  async (open) => {
+    if (!open) return
+    if (props.templates?.length) return
+    if (localTemplates.value.length) return
+
+    loading.value = true
+    loadError.value = ''
+    try {
+      localTemplates.value = await fetchPlantCatalog()
+    } catch (e) {
+      loadError.value = 'Catalog unavailable'
+      localTemplates.value = []
+    } finally {
+      loading.value = false
+    }
+  },
+)
+
+const templatesSource = computed(() =>
+  props.templates?.length ? props.templates : localTemplates.value,
+)
+
+const tagsSource = computed(() => {
+  if (props.tags?.length) return props.tags
+
+  const set = new Set()
+  for (const p of templatesSource.value) {
+    const arr = Array.isArray(p.tags) ? p.tags : []
+    for (const t of arr) set.add(t)
+  }
+
+  return [
+    { title: 'All', value: 'all' },
+    ...Array.from(set)
+      .sort()
+      .map((t) => ({ title: t, value: t })),
+  ]
+})
+
 const filteredTemplates = computed(() => {
   const s = (props.search || '').toLowerCase().trim()
-  return props.templates.filter((p) => {
+
+  return templatesSource.value.filter((p) => {
     const matchesSearch =
       !s ||
-      (p.commonName || '').toLowerCase().includes(s) ||
-      (p.scientificName || '').toLowerCase().includes(s)
+      String(p.commonName || '')
+        .toLowerCase()
+        .includes(s) ||
+      String(p.species || '')
+        .toLowerCase()
+        .includes(s)
 
+    const tags = Array.isArray(p.tags) ? p.tags : []
     const matchesTag =
       props.activeTag === 'all' ||
-      (p.tags || []).includes(props.activeTag) ||
-      (p.category || '') === props.activeTag
+      (props.activeTag === 'petSafe' ? Boolean(p.petSafe) : tags.includes(props.activeTag))
 
     return matchesSearch && matchesTag
   })
@@ -59,7 +110,7 @@ const filteredTemplates = computed(() => {
         selected-class="chip-active"
       >
         <v-chip
-          v-for="t in tags"
+          v-for="t in tagsSource"
           :key="t.value"
           :value="t.value"
           rounded="xl"
@@ -71,8 +122,24 @@ const filteredTemplates = computed(() => {
       </v-chip-group>
     </div>
 
-    <div v-if="filteredTemplates.length" class="grid">
-      <PlantCard v-for="p in filteredTemplates" :key="p.id" :plant="p" @click="emit('select', p)" />
+    <div v-if="loading" class="empty">
+      <v-progress-circular indeterminate size="28" />
+      <div class="empty-t">Loading catalog...</div>
+    </div>
+
+    <div v-else-if="loadError" class="empty">
+      <v-icon size="26">mdi-alert-circle-outline</v-icon>
+      <div class="empty-t">{{ loadError }}</div>
+      <div class="empty-s">Check backend and try again.</div>
+    </div>
+
+    <div v-else-if="filteredTemplates.length" class="grid">
+      <PlantCard
+        v-for="p in filteredTemplates"
+        :key="p.templateId || p.id"
+        :plant="p"
+        @click="emit('select', p)"
+      />
     </div>
 
     <div v-else class="empty">
