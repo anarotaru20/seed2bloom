@@ -2,7 +2,7 @@
 const props = defineProps({
   plant: { type: Object, required: true },
 })
-const emit = defineEmits(['edit'])
+const emit = defineEmits(['edit', 'delete'])
 
 const statusLabel = (s) => (s === 'needs' ? 'Needs water' : s === 'due' ? 'Due soon' : 'OK')
 const statusIcon = (s) =>
@@ -13,9 +13,6 @@ const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok'
 <template>
   <v-card class="card" rounded="2xl" elevation="0">
     <div class="top">
-      <!-- <div class="pic">
-        <v-icon size="26">mdi-image-outline</v-icon>
-      </div> -->
       <div class="pic">
         <img v-if="plant.photoUrl" :src="plant.photoUrl" alt="plant" class="img" />
         <v-icon v-else size="26">mdi-image-outline</v-icon>
@@ -56,6 +53,17 @@ const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok'
           <v-icon start>mdi-water</v-icon>
           Water now
         </v-btn>
+
+        <v-btn
+          rounded="xl"
+          variant="outlined"
+          class="btn btn-danger"
+          color="red"
+          @click.stop="emit('delete', plant)"
+        >
+          <v-icon start>mdi-delete</v-icon>
+          Delete
+        </v-btn>
       </div>
     </div>
   </v-card>
@@ -85,6 +93,14 @@ const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok'
   place-items: center;
   background: rgba(18, 23, 38, 0.04);
   border: 1px solid rgba(18, 23, 38, 0.08);
+  overflow: hidden;
+}
+
+.img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .badges {
@@ -169,22 +185,8 @@ const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok'
   background: rgba(46, 125, 50, 0.14);
   border: 1px solid rgba(46, 125, 50, 0.22);
 }
-.pic {
-  width: 62px;
-  height: 62px;
-  border-radius: 18px;
-  display: grid;
-  place-items: center;
-  background: rgba(18, 23, 38, 0.04);
-  border: 1px solid rgba(18, 23, 38, 0.08);
-  overflow: hidden;
-}
 
-.img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+.btn-danger {
+  border-color: rgba(239, 68, 68, 0.35);
 }
-
 </style>

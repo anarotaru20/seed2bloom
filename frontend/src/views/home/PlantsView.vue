@@ -1,15 +1,20 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import MyPlantCard from '@/components/MyPlantCard.vue'
 import PlantDetailsDialog from '@/components/dialog/PlantDetailsDialog.vue'
 import PlantCatalogDialog from '@/components/dialog/PlantCatalogDialog.vue'
+import { usePlantsStore } from '@/stores/plants'
+
+const plantsStore = usePlantsStore()
 
 const q = ref('')
 const status = ref('all')
 const location = ref('all')
-// dialog for adding new plant
+
 const addDialog = ref(false)
-// searched/filtered plants
+const detailsDialog = ref(false)
+const selectedTemplate = ref(null)
+
 const search = ref('')
 const activeTag = ref('all')
 const tags = [
@@ -20,85 +25,6 @@ const tags = [
   { title: 'Easy', value: 'easy' },
   { title: 'Pet-safe', value: 'petSafe' },
 ]
-// mock plant data
-const plantTemplates = ref([
-  {
-    id: 't1',
-    commonName: 'Monstera',
-    scientificName: 'Monstera deliciosa',
-    tags: ['indoor', 'exotic'],
-    light: 'bright',
-    water: 'medium',
-    petSafe: false,
-  },
-  {
-    id: 't2',
-    commonName: 'Pothos',
-    scientificName: 'Epipremnum aureum',
-    tags: ['indoor', 'easy'],
-    light: 'medium',
-    water: 'medium',
-    petSafe: false,
-  },
-  {
-    id: 't3',
-    commonName: 'Snake Plant',
-    scientificName: 'Sansevieria',
-    tags: ['indoor', 'easy'],
-    light: 'low',
-    water: 'low',
-    petSafe: false,
-  },
-  {
-    id: 't4',
-    commonName: 'ZZ Plant',
-    scientificName: 'Zamioculcas',
-    tags: ['indoor', 'easy'],
-    light: 'low',
-    water: 'low',
-    petSafe: false,
-  },
-  {
-    id: 't5',
-    commonName: 'Lavender',
-    scientificName: 'Lavandula',
-    tags: ['outdoor'],
-    light: 'bright',
-    water: 'low',
-    petSafe: true,
-  },
-  {
-    id: 't6',
-    commonName: 'Basil',
-    scientificName: 'Ocimum basilicum',
-    tags: ['outdoor'],
-    light: 'bright',
-    water: 'high',
-    petSafe: true,
-  },
-  {
-    id: 't7',
-    commonName: 'Calathea',
-    scientificName: 'Calathea orbifolia',
-    tags: ['indoor', 'exotic'],
-    light: 'medium',
-    water: 'high',
-    petSafe: true,
-  },
-  {
-    id: 't8',
-    commonName: 'Aloe',
-    scientificName: 'Aloe vera',
-    tags: ['indoor', 'easy'],
-    light: 'bright',
-    water: 'low',
-    petSafe: false,
-  },
-])
-
-//plant details
-const detailsDialog = ref(false)
-const selectedTemplate = ref(null)
 
 const form = ref({
   location: '',
@@ -107,6 +33,10 @@ const form = ref({
 })
 
 const locationItems = ['Living', 'Balcony', 'Kitchen', 'Bedroom']
+
+onMounted(() => {
+  plantsStore.fetchPlants()
+})
 
 const openDetails = (tpl) => {
   selectedTemplate.value = tpl
@@ -119,101 +49,55 @@ const openDetails = (tpl) => {
   detailsDialog.value = true
 }
 
-const closeDetails = () => {
-  detailsDialog.value = false
-  selectedTemplate.value = null
-}
-
-const saveNewPlant = () => {
-  detailsDialog.value = false
-  selectedTemplate.value = null
-}
-
 const backToCatalog = () => {
   detailsDialog.value = false
   addDialog.value = true
 }
 
-// my plants page
-const filteredTemplates = computed(() => {
-  const term = search.value.trim().toLowerCase()
-  const tag = activeTag.value
-
-  return plantTemplates.value.filter((p) => {
-    const matchesText =
-      !term ||
-      p.commonName.toLowerCase().includes(term) ||
-      (p.scientificName || '').toLowerCase().includes(term)
-
-    const matchesTag = tag === 'all' || (tag === 'petSafe' ? p.petSafe : p.tags.includes(tag))
-
-    return matchesText && matchesTag
+const saveNewPlant = async () => {
+  if (!selectedTemplate.value) return
+  await plantsStore.addPlant({
+    templateId: selectedTemplate.value.id,
+    location: form.value.location,
+    waterEveryDays: Number(form.value.waterEveryDays),
+    notes: form.value.notes,
   })
-})
-
-const iconByLight = (l) =>
-  l === 'low'
-    ? 'mdi-weather-night'
-    : l === 'medium'
-      ? 'mdi-weather-partly-cloudy'
-      : 'mdi-weather-sunny'
-const iconByWater = (w) =>
-  w === 'low' ? 'mdi-water-outline' : w === 'medium' ? 'mdi-water' : 'mdi-water-plus'
-
-const pickTemplate = (p) => {
-  addDialog.value = false
+  detailsDialog.value = false
+  selectedTemplate.value = null
 }
 
-const plants = ref([
-  {
-    id: 'p1',
-    name: 'Monstera',
-    location: 'Living',
-    waterEveryDays: 3,
-    status: 'needs',
-    note: 'Big leaves, likes bright light.',
-    photoUrl: '',
-  },
-  {
-    id: 'p2',
-    name: 'Pothos',
-    location: 'Balcony',
-    waterEveryDays: 5,
-    status: 'due',
-    note: 'Fast grower.',
-  },
-  { id: 'p3', name: 'Ficus', location: 'Kitchen', waterEveryDays: 7, status: 'ok', note: 'lala' },
-  {
-    id: 'p4',
-    name: 'Aloe',
-    location: 'Bedroom',
-    waterEveryDays: 10,
-    status: 'ok',
-    note: 'Low maintenance.',
-  },
-])
+const locations = computed(() => {
+  const locs = plantsStore.plants.map((p) => p?.settings?.location).filter(Boolean)
+  return ['all', ...Array.from(new Set(locs))]
+})
 
-const locations = computed(() => [
-  'all',
-  ...Array.from(new Set(plants.value.map((p) => p.location))),
-])
+const normalizedPlants = computed(() =>
+  (plantsStore.plants || []).map((p) => ({
+    id: p.id,
+    name: p?.template?.commonName || 'Plant',
+    location: p?.settings?.location || '',
+    waterEveryDays: p?.settings?.waterEveryDays ?? 0,
+    note: p?.settings?.notes || '',
+    photoUrl: p?.template?.imageUrl || '',
+    status: 'ok',
+    _raw: p,
+  })),
+)
 
 const filtered = computed(() => {
   const term = q.value.trim().toLowerCase()
-  return plants.value.filter((p) => {
+  return normalizedPlants.value.filter((p) => {
     const matchesQ =
-      !term ||
-      p.name.toLowerCase().includes(term) ||
-      (p.location || '').toLowerCase().includes(term)
+      !term || p.name.toLowerCase().includes(term) || (p.location || '').toLowerCase().includes(term)
     const matchesStatus = status.value === 'all' || p.status === status.value
     const matchesLoc = location.value === 'all' || p.location === location.value
     return matchesQ && matchesStatus && matchesLoc
   })
 })
 
-// edit plants
 const editDialog = ref(false)
 const selectedPlant = ref(null)
+const editSaving = ref(false)
 
 const editForm = ref({
   location: '',
@@ -230,25 +114,44 @@ const openEdit = (p) => {
     notes: p.note || '',
     photoUrl: p.photoUrl || '',
   }
-
   editDialog.value = true
 }
 
-const saveEdit = () => {
+const saveEdit = async () => {
   if (!selectedPlant.value) return
-  const idx = plants.value.findIndex((x) => x.id === selectedPlant.value.id)
-  if (idx === -1) return
-
-  plants.value[idx] = {
-    ...plants.value[idx],
-    location: editForm.value.location,
-    waterEveryDays: Number(editForm.value.waterEveryDays) || plants.value[idx].waterEveryDays,
-    note: editForm.value.notes,
-    photoUrl: editForm.value.photoUrl,
+  editSaving.value = true
+  try {
+    await plantsStore.updatePlant(selectedPlant.value.id, {
+      location: editForm.value.location,
+      waterEveryDays: Number(editForm.value.waterEveryDays),
+      notes: editForm.value.notes,
+    })
+    editDialog.value = false
+    selectedPlant.value = null
+  } finally {
+    editSaving.value = false
   }
+}
 
-  editDialog.value = false
-  selectedPlant.value = null
+const deleteDialog = ref(false)
+const plantToDelete = ref(null)
+const deleteLoading = ref(false)
+
+const openDelete = (p) => {
+  plantToDelete.value = p
+  deleteDialog.value = true
+}
+
+const confirmDelete = async () => {
+  if (!plantToDelete.value) return
+  deleteLoading.value = true
+  try {
+    await plantsStore.deletePlant(plantToDelete.value.id)
+    deleteDialog.value = false
+    plantToDelete.value = null
+  } finally {
+    deleteLoading.value = false
+  }
 }
 </script>
 
@@ -308,7 +211,10 @@ const saveEdit = () => {
       />
     </div>
 
-    <!-- DIALOG FOR CATALOG - ADD PLANTS -->
+    <div v-if="plantsStore.loading" class="state">Loading...</div>
+    <div v-else-if="plantsStore.error" class="state error">{{ plantsStore.error }}</div>
+    <div v-else-if="filtered.length === 0" class="state">No plants yet. Add your first one 🌱</div>
+
     <PlantCatalogDialog
       v-model="addDialog"
       v-model:search="search"
@@ -322,12 +228,12 @@ const saveEdit = () => {
       :plant="selectedPlant"
       :form="editForm"
       :locations="locationItems"
+      :saving="editSaving"
       @update:form="editForm = $event"
       @back="editDialog = false"
       @save="saveEdit"
     />
 
-    <!-- PLANT DETAILS -->
     <PlantDetailsDialog
       v-model="detailsDialog"
       :plant="selectedTemplate"
@@ -338,10 +244,31 @@ const saveEdit = () => {
       @save="saveNewPlant"
     />
 
-    <!-- PLANT CARDS -->
-    <v-row dense class="grid-my-plants" style="row-gap: 12px">
+    <v-dialog v-model="deleteDialog" max-width="420">
+      <v-card rounded="2xl">
+        <v-card-title class="font-weight-black">Delete plant?</v-card-title>
+        <v-card-text>
+          This will permanently delete <strong>{{ plantToDelete?.name }}</strong>.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn rounded="xl" variant="text" @click="deleteDialog = false">Cancel</v-btn>
+          <v-btn
+            rounded="xl"
+            variant="flat"
+            color="red"
+            :loading="deleteLoading"
+            @click="confirmDelete"
+          >
+            Delete
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-row v-if="!plantsStore.loading && !plantsStore.error" dense class="grid-my-plants" style="row-gap: 12px">
       <v-col v-for="p in filtered" :key="p.id" cols="12" sm="6" md="4" lg="4">
-        <MyPlantCard :plant="p" @edit="openEdit" />
+        <MyPlantCard :plant="p" @edit="openEdit" @delete="openDelete" />
       </v-col>
     </v-row>
   </div>
@@ -391,6 +318,16 @@ const saveEdit = () => {
 
 .grid-my-plants {
   margin-top: 2px;
+}
+
+.state {
+  padding: 14px 4px;
+  font-weight: 800;
+  opacity: 0.75;
+}
+
+.error {
+  opacity: 1;
 }
 
 @media (max-width: 960px) {
