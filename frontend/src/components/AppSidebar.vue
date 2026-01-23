@@ -127,8 +127,13 @@ onBeforeUnmount(() => {
 })
 
 // Icon switches from sun to moon after 18:00
-const isNight = computed(() => now.value.getHours() >= 18)
+const isNight = computed(() => {
+  const h = now.value.getHours()
+  return h < 6 || h >= 18
+})
+
 const dayIcon = computed(() => (isNight.value ? 'mdi-weather-night' : 'mdi-weather-sunny'))
+
 // display user's first name
 const firstName = computed(
   () => auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'there',
