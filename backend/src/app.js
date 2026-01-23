@@ -10,6 +10,7 @@ const PORT = 5000;
 
 const plantCatalogRoutes = require("./routes/plantCatalog");
 const plantRoutes = require("./routes/plants");
+const locationRoutes = require("./routes/locations");
 
 // middleware
 app.use(cors());
@@ -22,7 +23,7 @@ app.use((req, res, next) => {
 });
 
 // routes
-app.use("/", userRoutes, plantRoutes);
+app.use("/", userRoutes, plantRoutes, locationRoutes);
 app.use("/plants", plantCatalogRoutes);
 
 // start server
