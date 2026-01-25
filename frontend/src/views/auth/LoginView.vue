@@ -138,11 +138,31 @@ const passwordRules = [
 ]
 
 const canSubmit = computed(() => {
-  return (
-    isValidLoginForm({ email: email.value, password: password.value }) &&
-    !loading.value
-  )
+  return isValidLoginForm({ email: email.value, password: password.value }) && !loading.value
 })
+
+const extractAuthCode = (e) => {
+  const code = e?.code
+  if (typeof code === 'string' && code.startsWith('auth/')) return code
+  const msg = String(e?.message || '')
+  const m = msg.match(/\(?(auth\/[a-z0-9-]+)\)?/i)
+  return m?.[1] ? m[1].toLowerCase() : ''
+}
+
+const authErrorMessage = (e) => {
+  const code = extractAuthCode(e)
+  const map = {
+    'auth/invalid-credential': 'Invalid email or password.',
+    'auth/wrong-password': 'Invalid email or password.',
+    'auth/user-not-found': 'Invalid email or password.',
+    'auth/invalid-email': 'Please enter a valid email address.',
+    'auth/user-disabled': 'This account has been disabled. Please contact support.',
+    'auth/too-many-requests': 'Too many attempts. Please try again later.',
+    'auth/network-request-failed': 'Network error. Please check your connection and try again.',
+  }
+
+  return map[code] || 'Authentication failed. Please check your credentials and try again.'
+}
 
 const handleLogin = async () => {
   message.value = ''
@@ -154,7 +174,7 @@ const handleLogin = async () => {
     await auth.login(email.value.trim(), password.value)
     router.push('/dashboard')
   } catch (e) {
-    message.value = e?.message || 'Login failed'
+    message.value = authErrorMessage(e)
   } finally {
     loading.value = false
   }

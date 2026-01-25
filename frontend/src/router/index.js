@@ -30,7 +30,7 @@ const router = createRouter({
         { path: 'care-logs', name: 'care-logs', meta: { title: 'Care Logs' }, component: CareLogsView },
         { path: 'needs-water', name: 'needs-water', meta: { title: 'Needs Water' }, component: NeedsWaterView },
         { path: 'locations', name: 'locations', meta: { title: 'Locations' }, component: LocationsView },
-        { path: 'profile', component: ProfileView, meta: { title: 'Profile' } ,component: ProfileView },
+        { path: 'profile', meta: { title: 'Profile' } ,component: ProfileView },
 
       ],
     },
