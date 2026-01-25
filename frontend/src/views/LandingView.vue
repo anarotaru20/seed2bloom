@@ -18,8 +18,8 @@
             <h1 class="hero-title">Care, track, and grow your plants — in one calm place.</h1>
 
             <p class="hero-subtitle">
-              Seed2Bloom helps you remember watering, track progress, and build a simple checklist
-              for soil, pots, and essentials — so your plants stay happy.
+              Seed2Bloom helps you remember watering, track progress, and build a simple routine - so
+              your plants stay happy.
             </p>
 
             <div class="cta">
