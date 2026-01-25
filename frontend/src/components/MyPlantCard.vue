@@ -5,6 +5,56 @@
         <img v-if="plant.photoUrl" :src="plant.photoUrl" alt="plant" class="img" />
         <v-icon v-else size="26">mdi-image-outline</v-icon>
       </div>
+
+      <div class="chips" v-if="chips.length">
+        <v-chip
+          v-for="c in chips"
+          :key="c.key"
+          class="chip"
+          size="small"
+          label
+          rounded="xl"
+          variant="tonal"
+          :color="c.color"
+        >
+          <v-icon start size="16">{{ c.icon }}</v-icon>
+          {{ c.label }}
+        </v-chip>
+
+        <v-menu v-model="tagsMenu" location="bottom end" offset="10" v-if="moreTagsCount > 0">
+          <template #activator="{ props }">
+            <v-chip
+              v-bind="props"
+              class="chip chip-more"
+              size="small"
+              label
+              rounded="xl"
+              variant="tonal"
+            >
+              <v-icon start size="16">mdi-dots-horizontal</v-icon>
+              +{{ moreTagsCount }}
+            </v-chip>
+          </template>
+
+          <v-card rounded="xl" class="menu-card">
+            <div class="menu-title">All tags</div>
+            <div class="menu-tags">
+              <v-chip
+                v-for="t in allTags"
+                :key="t"
+                class="chip"
+                size="small"
+                label
+                rounded="xl"
+                variant="tonal"
+              >
+                <v-icon start size="16">mdi-tag</v-icon>
+                {{ t }}
+              </v-chip>
+            </div>
+          </v-card>
+        </v-menu>
+      </div>
     </div>
 
     <div class="body">
@@ -27,12 +77,7 @@
       </div>
 
       <div class="actions">
-        <v-btn
-          rounded="xl"
-          variant="outlined"
-          class="btn btn-edit"
-          @click.stop="emit('edit', plant)"
-        >
+        <v-btn rounded="xl" variant="outlined" class="btn btn-edit" @click.stop="emit('edit', plant)">
           <v-icon start>mdi-pencil</v-icon>
           Edit
         </v-btn>
@@ -53,15 +98,102 @@
 </template>
 
 <script setup>
+import { computed, ref } from 'vue'
+
 const props = defineProps({
   plant: { type: Object, required: true },
 })
 const emit = defineEmits(['edit', 'delete'])
 
-const statusLabel = (s) => (s === 'needs' ? 'Needs water' : s === 'due' ? 'Due soon' : 'OK')
-const statusIcon = (s) =>
-  s === 'needs' ? 'mdi-water-alert' : s === 'due' ? 'mdi-timer-sand' : 'mdi-check-circle'
-const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok')
+const tagsMenu = ref(false)
+
+const SAFE = new Set([
+  'spider plant',
+  'areca palm',
+  'parlor palm',
+  'boston fern',
+  'calathea',
+  'prayer plant',
+])
+
+const UNSAFE = new Set([
+  'peace lily',
+  'pothos',
+  'monstera',
+  'snake plant',
+  'zz plant',
+  'rubber plant',
+  'croton',
+  'yucca',
+  'fiddle leaf fig',
+])
+
+const norm = (s) => String(s || '').trim().toLowerCase()
+
+const toBool = (v) => {
+  if (v === true) return true
+  if (v === false) return false
+  if (v === 1 || v === '1') return true
+  if (v === 0 || v === '0') return false
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase()
+    if (['true', 'yes', 'y'].includes(s)) return true
+    if (['false', 'no', 'n'].includes(s)) return false
+  }
+  return null
+}
+
+const derivePetSafe = (name) => {
+  const n = norm(name)
+  if (!n) return null
+  if (SAFE.has(n)) return true
+  if (UNSAFE.has(n)) return false
+  return null
+}
+
+const resolvedPetSafe = computed(() => {
+  const p = props.plant || {}
+  const direct =
+    toBool(p.petSafe) ??
+    toBool(p.pet_safe) ??
+    toBool(p.isPetSafe) ??
+    toBool(p.is_pet_safe) ??
+    null
+  if (direct !== null) return direct
+  return derivePetSafe(p.commonName) ?? derivePetSafe(p.name) ?? derivePetSafe(p.species) ?? null
+})
+
+const allTags = computed(() => {
+  const p = props.plant || {}
+  return Array.isArray(p.tags) ? p.tags.map((x) => String(x)) : []
+})
+
+const shownTags = computed(() => allTags.value.slice(0, 2))
+const moreTagsCount = computed(() => Math.max(0, allTags.value.length - shownTags.value.length))
+
+const chips = computed(() => {
+  const p = props.plant || {}
+  const out = []
+
+  if (resolvedPetSafe.value !== null) {
+    out.push({
+      key: 'petSafe',
+      label: resolvedPetSafe.value ? 'Pet safe' : 'Not pet safe',
+      icon: resolvedPetSafe.value ? 'mdi-paw' : 'mdi-paw-off',
+      color: resolvedPetSafe.value ? '#FBBF24' : 'red',
+    })
+  }
+
+  if (p.species) {
+    out.push({ key: 'species', label: p.species, icon: 'mdi-leaf', color: 'green' })
+  }
+
+  shownTags.value.forEach((t, i) => {
+    out.push({ key: `tag-${i}-${t}`, label: t, icon: 'mdi-tag', color: 'grey' })
+  })
+
+  return out.slice(0, 5)
+})
 </script>
 
 <style scoped>
@@ -98,34 +230,41 @@ const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok'
   display: block;
 }
 
-.badges {
+.chips {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
-  align-items: center;
+  max-width: 70%;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 999px;
+.chip {
   border: 1px solid rgba(20, 31, 24, 0.08);
-  font-weight: 900;
-  font-size: 0.82rem;
-  white-space: nowrap;
+  font-weight: 850;
 }
 
-.badge.ok {
-  background: rgba(34, 197, 94, 0.12);
+.chip-more {
+  cursor: pointer;
 }
 
-.badge.due {
-  background: rgba(245, 158, 11, 0.12);
+.menu-card {
+  padding: 12px;
+  min-width: 260px;
+  border: 1px solid rgba(20, 31, 24, 0.08);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
 }
 
-.badge.needs {
-  background: rgba(239, 68, 68, 0.12);
+.menu-title {
+  font-weight: 950;
+  letter-spacing: -0.2px;
+  margin-bottom: 10px;
+}
+
+.menu-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .body {
@@ -161,8 +300,9 @@ const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok'
 .note {
   margin-top: 10px;
   font-size: 0.88rem;
-  opacity: 0.78;
-  font-weight: 650;
+  opacity: 0.75;
+  font-weight: 600;
+  font-style: italic;
 }
 
 .actions {
@@ -176,23 +316,11 @@ const statusClass = (s) => (s === 'needs' ? 'needs' : s === 'due' ? 'due' : 'ok'
   font-weight: 900;
 }
 
-.btn-primary {
-  background: rgba(46, 125, 50, 0.14);
-  border: 1px solid rgba(46, 125, 50, 0.22);
-}
-
 .btn-danger {
   border-color: rgba(239, 68, 68, 0.35);
 }
+
 .btn-edit {
   color: #2563eb;
 }
-.note {
-  margin-top: 10px;
-  font-size: 0.88rem;
-  opacity: 0.75;
-  font-weight: 600;
-  font-style: italic;
-}
-
 </style>

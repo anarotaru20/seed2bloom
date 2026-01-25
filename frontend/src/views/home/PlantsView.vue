@@ -6,7 +6,7 @@
         <div class="sub">All your plants in one place</div>
       </div>
 
-      <v-btn rounded="xl" variant="outlined" class="add" @click="addDialog = true">
+      <v-btn rounded="xl" variant="outlined" class="add" @click="openAdd">
         <v-icon start>mdi-plus</v-icon>
         Add plant
       </v-btn>
@@ -73,12 +73,13 @@
       :locations="locationItems"
       :saving="editSaving"
       @update:form="editForm = $event"
-      @back="editDialog = false"
+      @back="closeEdit"
       @save="saveEdit"
     />
 
     <PlantDetailsDialog
       v-model="detailsDialog"
+      :mode="'add'"
       :plant="selectedTemplate"
       :form="form"
       :locations="locationItems"
@@ -91,8 +92,7 @@
       <v-card rounded="2xl">
         <v-card-title class="font-weight-black">Delete plant?</v-card-title>
         <v-card-text>
-          This will permanently delete <strong>{{ plantToDelete?.name }}</strong
-          >.
+          This will permanently delete <strong>{{ plantToDelete?.name }}</strong>.
         </v-card-text>
         <v-card-actions>
           <v-spacer />
@@ -142,19 +142,12 @@ const selectedTemplate = ref(null)
 
 const search = ref('')
 const activeTag = ref('all')
-const tags = [
-  { title: 'All', value: 'all' },
-  { title: 'Indoor', value: 'indoor' },
-  { title: 'Outdoor', value: 'outdoor' },
-  { title: 'Exotic', value: 'exotic' },
-  { title: 'Easy', value: 'easy' },
-  { title: 'Pet-safe', value: 'petSafe' },
-]
 
 const form = ref({
   location: '',
   waterEveryDays: 3,
   notes: '',
+  photoUrl: '',
 })
 
 const locationItems = ['Living', 'Balcony', 'Kitchen', 'Bedroom']
@@ -163,12 +156,31 @@ onMounted(() => {
   plantsStore.fetchPlants()
 })
 
+const resetAddState = () => {
+  selectedTemplate.value = null
+  form.value = {
+    location: '',
+    waterEveryDays: 3,
+    notes: '',
+    photoUrl: '',
+  }
+  detailsDialog.value = false
+}
+
+const openAdd = () => {
+  resetAddState()
+  search.value = ''
+  activeTag.value = 'all'
+  addDialog.value = true
+}
+
 const openDetails = (tpl) => {
   selectedTemplate.value = tpl
   form.value = {
     location: '',
     waterEveryDays: 3,
     notes: '',
+    photoUrl: '',
   }
   addDialog.value = false
   detailsDialog.value = true
@@ -181,14 +193,27 @@ const backToCatalog = () => {
 
 const saveNewPlant = async () => {
   if (!selectedTemplate.value) return
+
+  const tpl = selectedTemplate.value
+  const petSafeVal = tpl.petSafe ?? tpl.pet_safe ?? tpl.isPetSafe ?? tpl.is_pet_safe ?? null
+
   await plantsStore.addPlant({
-    templateId: selectedTemplate.value.id,
+    templateId: tpl.id,
     location: form.value.location,
     waterEveryDays: Number(form.value.waterEveryDays),
     notes: form.value.notes,
+    photoUrl: form.value.photoUrl,
+
+    petSafe: petSafeVal,
+    tags: tpl.tags ?? [],
+    light: tpl.light ?? null,
+    species: tpl.species ?? null,
+    commonName: tpl.commonName ?? tpl.common_name ?? null,
   })
+
   detailsDialog.value = false
   selectedTemplate.value = null
+  resetAddState()
 }
 
 const locations = computed(() => {
@@ -199,12 +224,22 @@ const locations = computed(() => {
 const normalizedPlants = computed(() =>
   (plantsStore.plants || []).map((p) => ({
     id: p.id,
-    name: p?.template?.commonName || 'Plant',
+    name: p?.commonName ?? p?.template?.commonName ?? p?.template?.common_name ?? 'Plant',
     location: p?.settings?.location || '',
     waterEveryDays: p?.settings?.waterEveryDays ?? 0,
     note: p?.settings?.notes || '',
-    photoUrl: p?.template?.imageUrl || '',
+    photoUrl: p?.photoUrl ?? p?.template?.imageUrl ?? '',
     status: 'ok',
+    petSafe:
+      p?.petSafe ??
+      p?.pet_safe ??
+      p?.template?.petSafe ??
+      p?.template?.pet_safe ??
+      p?.template?.isPetSafe ??
+      null,
+    tags: p?.tags ?? p?.template?.tags ?? [],
+    light: p?.light ?? p?.template?.light ?? null,
+    species: p?.species ?? p?.template?.species ?? null,
     _raw: p,
   })),
 )
@@ -214,8 +249,8 @@ const filtered = computed(() => {
   return normalizedPlants.value.filter((p) => {
     const matchesQ =
       !term ||
-      p.name.toLowerCase().includes(term) ||
-      (p.location || '').toLowerCase().includes(term)
+      String(p.name || '').toLowerCase().includes(term) ||
+      String(p.location || '').toLowerCase().includes(term)
     const matchesStatus = status.value === 'all' || p.status === status.value
     const matchesLoc = location.value === 'all' || p.location === location.value
     return matchesQ && matchesStatus && matchesLoc
@@ -233,6 +268,17 @@ const editForm = ref({
   photoUrl: '',
 })
 
+const resetEditState = () => {
+  selectedPlant.value = null
+  editForm.value = {
+    location: '',
+    waterEveryDays: 3,
+    notes: '',
+    photoUrl: '',
+  }
+  editDialog.value = false
+}
+
 const openEdit = (p) => {
   selectedPlant.value = p
   editForm.value = {
@@ -244,6 +290,10 @@ const openEdit = (p) => {
   editDialog.value = true
 }
 
+const closeEdit = () => {
+  resetEditState()
+}
+
 const saveEdit = async () => {
   if (!selectedPlant.value) return
   editSaving.value = true
@@ -252,9 +302,9 @@ const saveEdit = async () => {
       location: editForm.value.location,
       waterEveryDays: Number(editForm.value.waterEveryDays),
       notes: editForm.value.notes,
+      photoUrl: editForm.value.photoUrl,
     })
-    editDialog.value = false
-    selectedPlant.value = null
+    resetEditState()
   } finally {
     editSaving.value = false
   }

@@ -24,23 +24,24 @@
         <div class="preview-tags">
           <v-chip
             v-if="plant?.petSafe"
-            class="tag tag-safe"
+            class="tag"
             rounded="xl"
             variant="flat"
             size="small"
+            :style="tagTheme('pet-safe')"
           >
             <v-icon start size="16">mdi-paw</v-icon>
             Pet-safe
           </v-chip>
 
           <v-chip
-            v-for="(t, idx) in (plant?.tags || []).slice(0, 2)"
+            v-for="t in (plant?.tags || []).slice(0, 3)"
             :key="t"
             class="tag"
-            :class="idx === 0 ? 'tag-a' : 'tag-b'"
             rounded="xl"
             variant="flat"
             size="small"
+            :style="tagTheme(t)"
           >
             {{ t }}
           </v-chip>
@@ -152,18 +153,60 @@ const emit = defineEmits(['update:modelValue', 'back', 'save'])
 
 const isFormValid = ref(false)
 
+const normTag = (t) =>
+  String(t || '').trim().toLowerCase().replace(/\s+/g, '-')
+
+const tagTheme = (t) => {
+  const k = normTag(t)
+
+  const palette = {
+    decorative: { bg: '#fdecef', fg: '#9b2c3e' },
+    'slow-growth': { bg: '#eef2ff', fg: '#3730a3' },
+    tropical: { bg: '#ecfdf5', fg: '#065f46' },
+    indoor: { bg: '#f0fdf4', fg: '#166534' },
+    'low-light': { bg: '#f1f5f9', fg: '#334155' },
+    'pet-safe': { bg: '#fff7ed', fg: '#9a3412' },
+    'easy-care': { bg: '#fef9c3', fg: '#854d0e' },
+    'air-purifying': { bg: '#e0f2fe', fg: '#075985' },
+    succulent: { bg: '#fce7f3', fg: '#9d174d' },
+    cactus: { bg: '#ede9fe', fg: '#5b21b6' },
+    fern: { bg: '#dcfce7', fg: '#166534' },
+    flowering: { bg: '#ffe4e6', fg: '#9f1239' },
+    variegated: { bg: '#e2e8f0', fg: '#334155' },
+    hanging: { bg: '#fae8ff', fg: '#7e22ce' },
+    'fast-growth': { bg: '#dbeafe', fg: '#1d4ed8' },
+    fragrant: { bg: '#ffedd5', fg: '#9a3412' },
+    hardy: { bg: '#e5e7eb', fg: '#374151' },
+    'low-water': { bg: '#e0f2fe', fg: '#0c4a6e' },
+  }
+
+  if (palette[k]) {
+    return {
+      background: palette[k].bg,
+      color: palette[k].fg,
+    }
+  }
+
+  let h = 0
+  for (let i = 0; i < k.length; i++) {
+    h = (h * 31 + k.charCodeAt(i)) % 360
+  }
+
+  return {
+    background: `hsl(${h} 80% 92%)`,
+    color: `hsl(${h} 45% 28%)`,
+  }
+}
+
 const rules = computed(() => ({
   required: (label) => (v) =>
     isValidPlantLocation(v) ? true : `${label} is required`,
-
   waterEvery: (v) =>
     isValidWaterEveryDays(v)
       ? true
       : 'Water frequency must be between 1 and 365 days',
-
   photoUrl: (v) =>
     isValidPhotoUrl(v) ? true : 'Enter a valid http(s) URL',
-
   notes: (v) =>
     isValidPlantNotes(v)
       ? true
@@ -200,6 +243,10 @@ const rules = computed(() => ({
   margin-left: auto;
   display: flex;
   gap: 6px;
+}
+
+.tag {
+  font-weight: 600;
 }
 
 .actions-bar {

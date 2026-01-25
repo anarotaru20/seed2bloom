@@ -32,7 +32,10 @@
           rounded="xl"
           class="chip"
           variant="flat"
+          :class="['chip-dyn', chipClass(t.value)]"
+          :style="chipStyle(t.value)"
         >
+          <v-icon start size="16">{{ chipIcon(t.value) }}</v-icon>
           {{ t.title }}
         </v-chip>
       </v-chip-group>
@@ -121,11 +124,82 @@ const tagsSource = computed(() => {
 
   return [
     { title: 'All', value: 'all' },
+    { title: 'Pet safe', value: 'petSafe' },
     ...Array.from(set)
       .sort()
       .map((t) => ({ title: t, value: t })),
   ]
 })
+
+const chipIcon = (v) => {
+  const s = String(v)
+
+  if (v === 'all') return 'mdi-view-grid-outline'
+  if (v === 'petSafe') return 'mdi-paw'
+
+  const rules = [
+    { k: ['low-light', 'shade', 'low'], ic: 'mdi-weather-night' },
+    { k: ['medium-light', 'medium'], ic: 'mdi-weather-partly-cloudy' },
+    { k: ['bright', 'sun', 'full-sun'], ic: 'mdi-weather-sunny' },
+    { k: ['tropical', 'humid'], ic: 'mdi-palm-tree' },
+    { k: ['succulent', 'cactus', 'drought'], ic: 'mdi-cactus' },
+    { k: ['flower', 'bloom'], ic: 'mdi-flower-outline' },
+    { k: ['herb', 'edible'], ic: 'mdi-leaf' },
+    { k: ['air', 'purify'], ic: 'mdi-air-filter' },
+    { k: ['fast', 'rapid'], ic: 'mdi-run-fast' },
+    { k: ['slow', 'slow-growth'], ic: 'mdi-timer-sand' },
+    { k: ['easy', 'beginner'], ic: 'mdi-thumb-up-outline' },
+    { k: ['rare', 'exotic'], ic: 'mdi-diamond-stone' },
+    { k: ['climbing', 'vine'], ic: 'mdi-vector-curve' },
+    { k: ['hanging'], ic: 'mdi-ceiling-light' },
+    { k: ['indoor'], ic: 'mdi-home-outline' },
+    { k: ['outdoor'], ic: 'mdi-forest-outline' },
+    { k: ['decor', 'decorative'], ic: 'mdi-palette-outline' },
+    { k: ['water', 'thirsty'], ic: 'mdi-water-outline' },
+  ]
+
+  for (const r of rules) {
+    if (r.k.some((kw) => s.includes(kw))) return r.ic
+  }
+  return 'mdi-tag-outline'
+}
+
+const hashHue = (str) => {
+  let h = 0
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0
+  return h % 360
+}
+
+const chipStyle = (v) => {
+  if (v === 'all') {
+    return {
+      background: 'rgba(99, 102, 241, 0.14)',
+      borderColor: 'rgba(99, 102, 241, 0.24)',
+      color: 'rgba(30, 41, 59, 0.95)',
+    }
+  }
+
+  if (v === 'petSafe') {
+    return {
+      background: 'rgba(245, 158, 11, 0.22)',
+      borderColor: 'rgba(245, 158, 11, 0.34)',
+      color: 'rgba(120, 53, 15, 0.98)',
+    }
+  }
+
+  const hue = hashHue(String(v))
+  return {
+    background: `hsla(${hue}, 85%, 60%, 0.18)`,
+    borderColor: `hsla(${hue}, 85%, 50%, 0.30)`,
+    color: `hsla(${hue}, 42%, 22%, 0.98)`,
+  }
+}
+
+const chipClass = (v) => {
+  if (v === 'petSafe') return 'chip-petsafe'
+  if (v === 'all') return 'chip-all'
+  return 'chip-generic'
+}
 
 const filteredTemplates = computed(() => {
   const s = (props.search || '').toLowerCase().trim()
@@ -165,11 +239,26 @@ const filteredTemplates = computed(() => {
   font-weight: 900;
   border: 1px solid rgba(20, 31, 24, 0.08);
   background: rgba(255, 255, 255, 0.7);
+  opacity: 1;
+}
+
+.chip-dyn {
+  border-width: 1px !important;
+  border-style: solid !important;
 }
 
 :deep(.chip-active) {
-  background: rgba(46, 125, 50, 0.14) !important;
-  border-color: rgba(46, 125, 50, 0.22) !important;
+  filter: saturate(1.15);
+  transform: translateY(-1px);
+}
+
+.chip-all,
+.chip-petsafe,
+.chip-generic {
+  transition:
+    transform 140ms ease,
+    box-shadow 140ms ease,
+    filter 140ms ease;
 }
 
 .grid {
