@@ -3,7 +3,7 @@ const { logger } = require("../src/config/logger");
 
 async function run() {
   logger.info("🚀 Running seeds...");
-  await seedPlants(25);
+  await seedPlants(30);
   logger.info("✅ Seeds finished");
 }
 

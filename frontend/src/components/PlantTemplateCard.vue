@@ -2,7 +2,8 @@
   <v-card class="card" rounded="2xl" elevation="0">
     <div class="top">
       <div class="pic">
-        <v-icon size="22">mdi-sprout</v-icon>
+        <img v-if="imgSrc" :src="imgSrc" alt="plant" class="pic-img" @error="imgError = true" />
+        <v-icon v-else size="22">mdi-sprout</v-icon>
       </div>
 
       <div class="top-chips">
@@ -63,11 +64,33 @@
 </template>
 
 <script setup>
+import { computed, ref, watch } from 'vue'
+
 const props = defineProps({
   plant: {
     type: Object,
     required: true,
   },
+})
+
+const imgError = ref(false)
+
+watch(
+  () => props.plant?.imageUrl,
+  () => {
+    imgError.value = false
+  },
+)
+
+const imgSrc = computed(() => {
+  if (imgError.value) return null
+  const u =
+    props.plant?.imageUrl ||
+    props.plant?.template?.imageUrl ||
+    props.plant?.photoUrl ||
+    props.plant?.settings?.photoUrl ||
+    null
+  return typeof u === 'string' && u.trim() ? u.trim() : null
 })
 
 const lightIcon = (v) =>
@@ -115,7 +138,7 @@ const hashHue = (str) => {
   return h % 360
 }
 
-const chipStyle = (v) => {
+const chipStyle = () => {
   return {
     background: 'rgba(15, 23, 42, 0.035)',
     borderColor: 'rgba(15, 23, 42, 0.08)',
@@ -129,7 +152,6 @@ const miniStyle = (type, v) => {
   const bg = `hsla(${hue}, 78%, 62%, 0.16)`
   const br = `hsla(${hue}, 78%, 52%, 0.28)`
   const tx = `hsla(${hue}, 40%, 22%, 0.96)`
-
   return { background: bg, borderColor: br, color: tx }
 }
 </script>
@@ -140,6 +162,7 @@ const miniStyle = (type, v) => {
   background: rgba(255, 255, 255, 0.9);
   overflow: hidden;
   cursor: pointer;
+  min-height: 230px;
   transition:
     transform 160ms ease,
     box-shadow 160ms ease,
@@ -153,67 +176,79 @@ const miniStyle = (type, v) => {
 }
 
 .top {
-  padding: 14px 14px 0;
+  padding: 16px 16px 0;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .pic {
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
   display: grid;
   place-items: center;
   background: rgba(46, 125, 50, 0.12);
   border: 1px solid rgba(46, 125, 50, 0.18);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.pic-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .top-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   justify-content: flex-end;
 }
 
 .mini {
   font-weight: 900;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  height: 24px;
+  border-radius: 999px;
   border: 1px solid rgba(20, 31, 24, 0.08);
-  opacity: 0.92;
+  opacity: 0.95;
 }
 
 .body {
-  padding: 12px 14px 14px;
+  padding: 14px 16px 16px;
 }
 
 .name {
   font-weight: 950;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   letter-spacing: -0.2px;
 }
 
 .sub {
-  margin-top: 2px;
-  font-size: 0.88rem;
-  opacity: 0.7;
+  margin-top: 3px;
+  font-size: 0.92rem;
+  opacity: 0.72;
   font-weight: 650;
 }
 
 .tags {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   max-width: 100%;
 }
 
 .tag {
   font-weight: 800;
-  font-size: 0.72rem;
-  padding: 2px 8px;
-  height: 22px;
+  font-size: 0.74rem;
+  padding: 3px 10px;
+  height: 24px;
   line-height: 1;
   border-radius: 999px;
   border: 1px solid rgba(18, 23, 38, 0.08);

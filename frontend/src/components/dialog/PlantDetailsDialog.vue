@@ -262,4 +262,18 @@ const rules = computed(() => ({
   padding: 10px 22px;
   border-radius: 999px !important;
 }
+.img-prev {
+  width: 100%;
+  padding-bottom: 15px;
+  border-radius: 18px;
+}
+
+.img-prev img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: 14px;
+  display: block;
+}
+
 </style>

@@ -2,6 +2,19 @@ const { db } = require("../config/db");
 
 const str = (v) => (typeof v === "string" ? v.trim() : "");
 
+const isHttpUrl = (v) => {
+  if (!v) return true;
+  if (typeof v !== "string") return false;
+  const s = v.trim();
+  if (!s) return true;
+  try {
+    const u = new URL(s);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 async function addPlant(req, res) {
   try {
     const uid = req.user?.uid;
@@ -11,6 +24,8 @@ async function addPlant(req, res) {
     const location = str(req.body?.location);
     const waterEveryDays = Number(req.body?.waterEveryDays);
     const notes = str(req.body?.notes);
+    const photoUrlRaw = str(req.body?.photoUrl);
+    const photoUrl = photoUrlRaw || null;
 
     if (!templateId)
       return res.status(400).json({ message: "templateId is required" });
@@ -18,6 +33,8 @@ async function addPlant(req, res) {
       return res.status(400).json({ message: "location is required" });
     if (!Number.isFinite(waterEveryDays) || waterEveryDays <= 0)
       return res.status(400).json({ message: "waterEveryDays must be > 0" });
+    if (!isHttpUrl(photoUrl))
+      return res.status(400).json({ message: "photoUrl must be a valid http(s) URL" });
 
     const tplSnap = await db.collection("plantCatalog").doc(templateId).get();
     if (!tplSnap.exists)
@@ -41,6 +58,7 @@ async function addPlant(req, res) {
         imageUrl: tpl.imageUrl || null,
         description: tpl.description || null,
       },
+      photoUrl: photoUrl || tpl.imageUrl || null,
       settings: {
         location,
         waterEveryDays: Math.trunc(waterEveryDays),
@@ -58,6 +76,7 @@ async function addPlant(req, res) {
       .doc(uid)
       .collection("myPlants")
       .add(doc);
+
     return res.status(201).json({ plant: { id: ref.id, ...doc } });
   } catch {
     return res.status(500).json({ message: "Failed to add plant" });
@@ -66,64 +85,74 @@ async function addPlant(req, res) {
 
 async function updatePlant(req, res) {
   try {
-    const uid = req.user?.uid
-    if (!uid) return res.status(401).json({ message: 'Unauthorized' })
+    const uid = req.user?.uid;
+    if (!uid) return res.status(401).json({ message: "Unauthorized" });
 
-    const id = str(req.params?.id)
-    if (!id) return res.status(400).json({ message: 'id is required' })
+    const id = str(req.params?.id);
+    if (!id) return res.status(400).json({ message: "id is required" });
 
-    const ref = db.collection('users').doc(uid).collection('myPlants').doc(id)
-    const snap = await ref.get()
-    if (!snap.exists) return res.status(404).json({ message: 'Plant not found' })
+    const ref = db.collection("users").doc(uid).collection("myPlants").doc(id);
+    const snap = await ref.get();
+    if (!snap.exists) return res.status(404).json({ message: "Plant not found" });
 
-    const now = new Date().toISOString()
-    const patch = {}
+    const now = new Date().toISOString();
+    const patch = {};
 
-    if ('location' in (req.body || {})) {
-      const location = str(req.body?.location)
-      if (!location) return res.status(400).json({ message: 'location is required' })
-      patch['settings.location'] = location
+    if ("location" in (req.body || {})) {
+      const location = str(req.body?.location);
+      if (!location) return res.status(400).json({ message: "location is required" });
+      patch["settings.location"] = location;
     }
 
-    if ('waterEveryDays' in (req.body || {})) {
-      const waterEveryDays = Number(req.body?.waterEveryDays)
+    if ("waterEveryDays" in (req.body || {})) {
+      const waterEveryDays = Number(req.body?.waterEveryDays);
       if (!Number.isFinite(waterEveryDays) || waterEveryDays <= 0)
-        return res.status(400).json({ message: 'waterEveryDays must be > 0' })
-      patch['settings.waterEveryDays'] = Math.trunc(waterEveryDays)
+        return res.status(400).json({ message: "waterEveryDays must be > 0" });
+      patch["settings.waterEveryDays"] = Math.trunc(waterEveryDays);
     }
 
-    if ('notes' in (req.body || {})) {
-      const notes = str(req.body?.notes)
-      patch['settings.notes'] = notes || null
+    if ("notes" in (req.body || {})) {
+      const notes = str(req.body?.notes);
+      patch["settings.notes"] = notes || null;
     }
 
-    if ('timestamps' in (req.body || {})) {
-      const last = req.body?.timestamps?.lastWateredAt
-      const lastStr = typeof last === 'string' ? last.trim() : ''
-      if (!lastStr) return res.status(400).json({ message: 'timestamps.lastWateredAt is required' })
-      patch['timestamps.lastWateredAt'] = lastStr
+    if ("photoUrl" in (req.body || {})) {
+      const photoUrlRaw = str(req.body?.photoUrl);
+      const photoUrl = photoUrlRaw || null;
+      if (!isHttpUrl(photoUrl))
+        return res.status(400).json({ message: "photoUrl must be a valid http(s) URL" });
+      patch["photoUrl"] = photoUrl;
     }
 
-    if ('lastWateredAt' in (req.body || {})) {
-      const last = str(req.body?.lastWateredAt)
-      if (!last) return res.status(400).json({ message: 'lastWateredAt is required' })
-      patch['timestamps.lastWateredAt'] = last
+    if ("timestamps" in (req.body || {})) {
+      const last = req.body?.timestamps?.lastWateredAt;
+      const lastStr = typeof last === "string" ? last.trim() : "";
+      if (!lastStr)
+        return res.status(400).json({ message: "timestamps.lastWateredAt is required" });
+      patch["timestamps.lastWateredAt"] = lastStr;
+    }
+
+    if ("lastWateredAt" in (req.body || {})) {
+      const last = str(req.body?.lastWateredAt);
+      if (!last) return res.status(400).json({ message: "lastWateredAt is required" });
+      patch["timestamps.lastWateredAt"] = last;
     }
 
     if (!Object.keys(patch).length)
-      return res.status(400).json({ message: 'No valid fields to update' })
+      return res.status(400).json({ message: "No valid fields to update" });
 
-    patch['timestamps.updatedAt'] = now
+    patch["timestamps.updatedAt"] = now;
 
-    await ref.update(patch)
+    await ref.update(patch);
 
-    const updated = await ref.get()
-    const data = updated.data()
-    return res.status(200).json({ plant: { id: updated.id, ...data } })
+    const updated = await ref.get();
+    const data = updated.data();
+    return res.status(200).json({ plant: { id: updated.id, ...data } });
   } catch {
-    return res.status(500).json({ message: 'Failed to update plant' })
+    return res.status(500).json({ message: "Failed to update plant" });
   }
 }
+
 async function deletePlant(req, res) {
   try {
     const uid = req.user?.uid;
@@ -134,8 +163,7 @@ async function deletePlant(req, res) {
 
     const ref = db.collection("users").doc(uid).collection("myPlants").doc(id);
     const snap = await ref.get();
-    if (!snap.exists)
-      return res.status(404).json({ message: "Plant not found" });
+    if (!snap.exists) return res.status(404).json({ message: "Plant not found" });
 
     await ref.delete();
     return res.status(204).send();
