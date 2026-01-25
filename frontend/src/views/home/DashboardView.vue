@@ -448,7 +448,7 @@ onMounted(async () => {
 
 <style scoped>
 .page {
-  padding-top: 6px;
+  padding-top: 20px;
 }
 
 .hdr {

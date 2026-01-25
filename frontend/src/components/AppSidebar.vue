@@ -1,5 +1,14 @@
 <template>
   <Navbar>
+    <template #center>
+      <div class="slogan">
+        <div class="slogan">
+          <span class="s1">🌿 Grow smart.</span>
+          <span class="s2">Care gently.</span>
+          <span class="s3">Bloom proudly. 🌿</span>
+        </div>
+      </div>
+    </template>
     <template #actions>
       <div class="actions">
         <span class="hello">
@@ -9,21 +18,21 @@
         <v-menu location="bottom end" offset="10">
           <template #activator="{ props }">
             <v-btn v-bind="props" icon variant="text" class="top-icon">
-              <v-icon>mdi-account-circle</v-icon>
+              <v-icon>mdi-account</v-icon>
             </v-btn>
           </template>
 
           <v-list class="profile-menu" density="comfortable">
-            <v-list-item to="/profile" rounded="xl">
+            <v-list-item to="/profile">
               <template #prepend>
                 <v-icon size="18">mdi-account</v-icon>
               </template>
-              <v-list-item-title>Profile</v-list-item-title>
+              <v-list-item-title>Profile details</v-list-item-title>
             </v-list-item>
 
             <v-divider class="my-2" />
 
-            <v-list-item @click="handleLogout" rounded="xl">
+            <v-list-item @click="handleLogout">
               <template #prepend>
                 <v-icon size="18">mdi-logout</v-icon>
               </template>
@@ -109,9 +118,9 @@ const handleLogout = () => {
 const items = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', to: '/dashboard' },
   { title: 'My plants', icon: 'mdi-sprout', to: '/plants' },
-  { title: 'Care logs', icon: 'mdi-history', to: '/care-logs' },
-  { title: 'Water needs', icon: 'mdi-water', to: '/needs-water' },
-  { title: 'Locations', icon: 'mdi-map-marker', to: '/locations' },
+  { title: 'My Locations', icon: 'mdi-map-marker', to: '/locations' },
+  { title: 'Water', icon: 'mdi-water', to: '/needs-water' },
+  { title: 'Care', icon: 'mdi-history', to: '/care-logs' },
 ]
 
 const activePath = computed(() => route.path)
@@ -197,7 +206,7 @@ const timeLabel = computed(() =>
   display: flex;
   flex-direction: column;
   padding: 14px 12px 12px 14px;
-  background:
+  /* background:
     radial-gradient(1000px 700px at 50% 80%, rgba(245, 200, 90, 0.2), transparent 65%),
     radial-gradient(900px 600px at 88% 12%, rgba(38, 206, 105, 0.26), transparent 60%),
     radial-gradient(900px 600px at 12% 8%, rgba(248, 66, 66, 0.418), transparent 60%),
@@ -206,7 +215,7 @@ const timeLabel = computed(() =>
       rgba(242, 240, 232, 0.97) 0%,
       rgba(238, 236, 220, 0.97) 5%,
       rgba(234, 232, 215, 0.97) 100%
-    );
+    ); */
 }
 
 .today-card {
@@ -373,5 +382,35 @@ const timeLabel = computed(() =>
   border-radius: 16px;
   padding: 6px;
   min-width: 180px;
+}
+.slogan {
+  display: flex;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.slogan .s1 {
+  color: #2a802e; 
+  font-weight: 800;
+}
+
+.slogan .s2 {
+  color: #a52826; 
+  font-weight: 800;
+}
+
+.slogan .s3 {
+  color: #f9a825; 
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .center {
+    display: none;
+  }
 }
 </style>
