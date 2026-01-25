@@ -133,10 +133,20 @@ const rawPlants = computed(() => plantsStore.plants || [])
 const rawLocations = computed(() => locationsStore.locations || [])
 const rawCareLogs = computed(() => careLogsStore?.logs || careLogsStore?.careLogs || [])
 
+const localIsoDate = (d = new Date()) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const startOfDayIso = (d = new Date()) => localIsoDate(d)
+
 const normalizeDate = (v) => {
   if (!v) return null
   if (v instanceof Date) return v
   if (typeof v === 'string') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
     const d = new Date(v)
     return Number.isNaN(d.getTime()) ? null : d
   }
@@ -155,24 +165,36 @@ const normalizeDate = (v) => {
   return null
 }
 
-const startOfDayIso = (d = new Date()) =>
-  new Date(d.getFullYear(), d.getMonth(), d.getDate()).toISOString().slice(0, 10)
-
 const toIsoDate = (v) => {
   const d = normalizeDate(v)
-  return d ? startOfDayIso(d) : ''
+  if (!d) return ''
+  if (typeof d === 'string') return d
+  return localIsoDate(d)
 }
 
 const addDaysIso = (isoDate, days) => {
   const d = new Date(isoDate + 'T00:00:00')
   d.setDate(d.getDate() + Number(days || 0))
-  return d.toISOString().slice(0, 10)
+  return localIsoDate(d)
 }
 
 const diffDays = (fromIso, toIso) => {
   const a = new Date(fromIso + 'T00:00:00').getTime()
   const b = new Date(toIso + 'T00:00:00').getTime()
   return Math.round((b - a) / 86400000)
+}
+
+const daysSinceIso = (iso) => {
+  const today = startOfDayIso()
+  const d = diffDays(iso, today)
+  return Math.max(0, d)
+}
+
+const lastWateredLabel = (iso) => {
+  const d = daysSinceIso(iso)
+  if (d === 0) return 'today'
+  if (d === 1) return 'yesterday'
+  return `${d} days ago`
 }
 
 const pad2 = (n) => String(n).padStart(2, '0')
@@ -221,10 +243,10 @@ const everyDaysOf = (p) =>
 
 const lastIsoOf = (p) =>
   toIsoDate(p?.timestamps?.lastWateredAt) ||
-  toIsoDate(p?.lastWateredAt) ||
   toIsoDate(p?.timestamps?.updatedAt) ||
-  toIsoDate(p?.updatedAt) ||
   toIsoDate(p?.timestamps?.createdAt) ||
+  toIsoDate(p?.lastWateredAt) ||
+  toIsoDate(p?.updatedAt) ||
   toIsoDate(p?.createdAt) ||
   startOfDayIso()
 
@@ -254,19 +276,23 @@ const dueInDays = (p) => {
 
 const wateringStatusOf = (p) => {
   const d = dueInDays(p)
+  const lastLbl = lastWateredLabel(p.lastIso)
 
   if (d < 0) {
     const overdue = Math.abs(d)
-    return { status: 'needs', hint: `Overdue by ${overdue} day${overdue === 1 ? '' : 's'}` }
+    return {
+      status: 'needs',
+      hint: `Last watered: ${lastLbl} • Overdue by ${overdue} day${overdue === 1 ? '' : 's'}`,
+    }
   }
 
-  if (d === 0) return { status: 'today', hint: 'Due today' }
+  if (d === 0) return { status: 'today', hint: `Last watered: ${lastLbl} • Due today` }
 
-  if (d === 1) return { status: 'due', hint: 'Due tomorrow' }
+  if (d === 1) return { status: 'due', hint: `Last watered: ${lastLbl} • Due tomorrow` }
 
-  if (d <= 3) return { status: 'due', hint: `Next in ${d} days` }
+  if (d <= 3) return { status: 'due', hint: `Last watered: ${lastLbl} • Next in ${d} days` }
 
-  return { status: 'ok', hint: `Next in ${d} days` }
+  return { status: 'ok', hint: `Last watered: ${lastLbl} • Next in ${d} days` }
 }
 
 const needsWater = computed(() => {

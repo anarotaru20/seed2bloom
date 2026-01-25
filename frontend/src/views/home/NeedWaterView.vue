@@ -432,9 +432,9 @@ const markDone = async (p) => {
 }
 
 .overdue-wrap {
-  border: 1px solid rgba(198, 40, 40, 0.22);
+  border: 3px solid rgba(198, 40, 40, 0.22);
   background: rgba(198, 40, 40, 0.06);
-  padding: 10px;
+  padding: 5px;
 }
 
 .chip {
