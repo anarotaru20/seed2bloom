@@ -152,7 +152,9 @@ async function deleteAccount(req, res) {
     const uid = req.user?.uid;
     if (!uid) return res.status(401).json({ message: "Unauthorized" });
 
-    await db.collection("users").doc(uid).delete();
+    await admin
+      .firestore()
+      .recursiveDelete(admin.firestore().collection("users").doc(uid));
 
     try {
       await admin.auth().deleteUser(uid);
